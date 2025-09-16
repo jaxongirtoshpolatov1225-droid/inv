@@ -13,31 +13,45 @@ Bu loyiha Python Flask va Bootstrap yordamida yaratilgan inventarizatsiya boshqa
 
 ## O'rnatish
 
+### Linux/Mac:
 1. Loyihani klonlang:
 ```bash
-git clone <repository-url>
-cd smart-mony
+git clone https://github.com/jaxongirtoshpolatov1225-droid/inv.git
+cd inv
 ```
 
-2. Virtual environment yarating:
+2. Kerakli kutubxonalarni o'rnating:
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# yoki
-venv\Scripts\activate  # Windows
+pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow
 ```
 
-3. Kerakli kutubxonalarni o'rnating:
+3. Loyihani ishga tushiring:
 ```bash
-pip install -r requirements.txt
+python3 inv_launcher.py
 ```
 
-4. Loyihani ishga tushiring:
-```bash
+### Windows:
+1. Loyihani klonlang yoki ZIP faylni yuklab oling
+2. Loyiha papkasida Command Prompt yoki PowerShell oching
+3. Quyidagi buyruqlardan birini ishlating:
+
+**Command Prompt (CMD):**
+```cmd
+inv_launcher_windows.bat
+```
+
+**PowerShell:**
+```powershell
+.\inv_launcher_windows.ps1
+```
+
+**Yoki to'g'ridan-to'g'ri:**
+```cmd
+pip install flask flask-sqlalchemy flask-cors qrcode pillow
 python app.py
 ```
 
-5. Brauzerda oching: `http://localhost:5000`
+4. Brauzerda oching: `http://localhost:5000`
 
 ## Foydalanish
 

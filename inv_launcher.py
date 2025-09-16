@@ -13,6 +13,8 @@ from pathlib import Path
 
 def check_dependencies():
     """Kerakli kutubxonalarni tekshirish"""
+    import platform
+    
     required_packages = [
         'flask',
         'flask_sqlalchemy', 
@@ -36,12 +38,49 @@ def check_dependencies():
         print("❌ Quyidagi kutubxonalar topilmadi:")
         for package in missing_packages:
             print(f"   - {package}")
+        
         print("\n📦 Kutubxonalarni o'rnatish uchun:")
-        print("   pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow")
-        return False
+        if platform.system() == "Windows":
+            print("   pip install flask flask-sqlalchemy flask-cors qrcode pillow")
+        else:
+            print("   pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow")
+        
+        print("\n🔄 Avtomatik o'rnatish uchun 'y' bosing, bekor qilish uchun 'n':")
+        choice = input().lower().strip()
+        
+        if choice == 'y' or choice == 'yes':
+            return install_dependencies()
+        else:
+            return False
     
     print("✅ Barcha kutubxonalar mavjud")
     return True
+
+def install_dependencies():
+    """Kutubxonalarni avtomatik o'rnatish"""
+    import subprocess
+    import platform
+    
+    print("📦 Kutubxonalar o'rnatilmoqda...")
+    
+    try:
+        if platform.system() == "Windows":
+            cmd = ["pip", "install", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow"]
+        else:
+            cmd = ["pip", "install", "--user", "--break-system-packages", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow"]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("✅ Kutubxonalar muvaffaqiyatli o'rnatildi!")
+            return True
+        else:
+            print(f"❌ Xatolik: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Xatolik: {e}")
+        return False
 
 def start_server():
     """Server ishga tushirish"""
