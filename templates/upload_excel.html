@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Excel Import - {{ organization.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Bosh sahifa</a></li>
+            <li class="breadcrumb-item"><a href="/organization/{{ organization.id }}">{{ organization.name }}</a></li>
+            <li class="breadcrumb-item active">Excel Import</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-upload"></i> Excel fayl yuklash</h4>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Excel fayl tanlang</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
+                            <div class="form-text">Faqat .xlsx va .xls fayllar qabul qilinadi</div>
+                        </div>
+
+                        {% if organization.has_floors %}
+                        <div class="mb-3">
+                            <label for="floorSelect" class="form-label">Qavat tanlang</label>
+                            <select class="form-select" id="floorSelect" required>
+                                <option value="">Qavat tanlang</option>
+                                {% for floor in organization.floors %}
+                                <option value="{{ floor.id }}">{{ floor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="roomSelect" class="form-label">Xona tanlang</label>
+                            <select class="form-select" id="roomSelect" required>
+                                <option value="">Avval qavat tanlang</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Yuklash va Import qilish
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Import qo'llanmasi</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Excel fayl tuzilishi:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>P/N(Cihaz Adı)</strong> - Jihoz nomi</li>
+                        <li><strong>COMPANY(marka)</strong> - Brend</li>
+                        <li><strong>MODEL(Model)</strong> - Model</li>
+                        <li><strong>S/N(Seri Numarası)</strong> - Seriya raqami</li>
+                        <li><strong>rangi(Renk)</strong> - Rang</li>
+                        <li><strong>ин/в(Envanter Numarası)</strong> - Inventarizatsiya kodi</li>
+                        <li><strong>O'lchov birligi(Miktar)</strong> - Miqdor</li>
+                        <li><strong>Holati(durum)</strong> - Holat</li>
+                        <li><strong>Kim foydalanayapti</strong> - Foydalanuvchi</li>
+                    </ul>
+                    
+                    <div class="alert alert-warning">
+                        <small>
+                            <strong>Eslatma:</strong> Inventarizatsiya kodi bo'sh bo'lsa, avtomatik yaratiladi.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="bi bi-download"></i> Namuna fayl</h5>
+                </div>
+                <div class="card-body">
+                    <p>Namuna Excel faylini yuklab oling:</p>
+                    <button class="btn btn-outline-primary btn-sm" onclick="downloadTemplate()">
+                        <i class="bi bi-download"></i> Namuna yuklab olish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Natija modali -->
+    <div class="modal fade" id="resultModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import natijasi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="resultContent">
+                    <!-- Natija bu yerda ko'rsatiladi -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
+                    <button type="button" class="btn btn-primary" onclick="goToRoom()">Xonaga o'tish</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedRoomId = null;
+
+// Qavat tanlanganda xonalarni yuklash
+document.getElementById('floorSelect').addEventListener('change', function() {
+    const floorId = this.value;
+    const roomSelect = document.getElementById('roomSelect');
+    
+    if (floorId) {
+        fetch(`/get_rooms_by_floor/${floorId}`)
+            .then(response => response.json())
+            .then(rooms => {
+                roomSelect.innerHTML = '<option value="">Xona tanlang</option>';
+                rooms.forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.id;
+                    option.textContent = room.name;
+                    roomSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Xatolik:', error);
+            });
+    } else {
+        roomSelect.innerHTML = '<option value="">Avval qavat tanlang</option>';
+    }
+});
+
+// Xona tanlanganda
+document.getElementById('roomSelect').addEventListener('change', function() {
+    selectedRoomId = this.value;
+});
+
+// Form yuborish
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!selectedRoomId) {
+        alert('Xona tanlang!');
+        return;
+    }
+    
+    const formData = new FormData();
+    const fileInput = document.getElementById('file');
+    const floorSelect = document.getElementById('floorSelect');
+    
+    if (!fileInput.files[0]) {
+        alert('Fayl tanlang!');
+        return;
+    }
+    
+    formData.append('file', fileInput.files[0]);
+    formData.append('room_id', selectedRoomId);
+    if (floorSelect.value) {
+        formData.append('floor_id', floorSelect.value);
+    }
+    
+    // Loading ko'rsatish
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Yuklanmoqda...';
+    submitBtn.disabled = true;
+    
+    fetch(`/import_excel/{{ organization.id }}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        showResult(data);
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        showResult({success: false, message: 'Yuklashda xatolik yuz berdi'});
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// Natijani ko'rsatish
+function showResult(data) {
+    const content = document.getElementById('resultContent');
+    
+    if (data.success) {
+        content.innerHTML = `
+            <div class="alert alert-success">
+                <h6><i class="bi bi-check-circle"></i> Muvaffaqiyatli!</h6>
+                <p>${data.message}</p>
+                ${data.imported_count ? `<p><strong>Import qilingan:</strong> ${data.imported_count} ta jihoz</p>` : ''}
+            </div>
+            ${data.errors && data.errors.length > 0 ? `
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Xatoliklar:</h6>
+                    <ul class="mb-0">
+                        ${data.errors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-x-circle"></i> Xatolik!</h6>
+                <p>${data.message}</p>
+            </div>
+        `;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+    modal.show();
+}
+
+// Xonaga o'tish
+function goToRoom() {
+    if (selectedRoomId) {
+        window.location.href = `/room/${selectedRoomId}`;
+    }
+}
+
+// Namuna fayl yuklab olish
+function downloadTemplate() {
+    // Namuna fayl yaratish
+    const data = [
+        ['P/N(Cihaz Adı)', 'COMPANY(marka)', 'MODEL(Model)', 'S/N(Seri Numarası)', 'rangi(Renk)', 'ин/в(Envanter Numarası)', 'O\'lchov birligi(Miktar)', 'Holati(durum)', 'Kim foydalanayapti(Kim kullanmış)'],
+        ['Kompyuter', 'Dell', 'OptiPlex 7090', 'SN123456', 'Qora', '', '1 dona', 'Active', 'Ahmad Karimov'],
+        ['Printer', 'HP', 'LaserJet Pro', 'SN789012', 'Oq', '', '1 dona', 'Active', 'Malika Toshmatova']
+    ];
+    
+    // CSV fayl yaratish
+    const csvContent = data.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'namuna_import.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

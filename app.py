@@ -6,9 +6,10 @@ import io
 import base64
 from datetime import datetime
 import os
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+import pandas as pd
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
@@ -328,6 +329,21 @@ def get_rooms(organization_id):
     
     return jsonify(room_list)
 
+# Qavat bo'yicha xonalarni olish
+@app.route('/get_rooms_by_floor/<int:floor_id>')
+def get_rooms_by_floor(floor_id):
+    rooms = Room.query.filter_by(floor_id=floor_id).all()
+    room_list = []
+    
+    for room in rooms:
+        room_data = {
+            'id': room.id,
+            'name': room.name
+        }
+        room_list.append(room_data)
+    
+    return jsonify(room_list)
+
 # Jihoz transfer tarixini olish
 @app.route('/transfer_history/<int:equipment_id>')
 def get_transfer_history(equipment_id):
@@ -347,6 +363,113 @@ def get_transfer_history(equipment_id):
         history_list.append(history_data)
     
     return jsonify(history_list)
+
+# Excel fayl yuklash sahifasi
+@app.route('/upload_excel/<int:organization_id>')
+def upload_excel_page(organization_id):
+    organization = Organization.query.get_or_404(organization_id)
+    return render_template('upload_excel.html', organization=organization)
+
+# Excel fayl yuklash va ma'lumotlarni import qilish
+@app.route('/import_excel/<int:organization_id>', methods=['POST'])
+def import_excel(organization_id):
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'Fayl tanlanmagan'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Fayl tanlanmagan'})
+        
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'success': False, 'message': 'Faqat Excel fayllar (.xlsx, .xls) qabul qilinadi'})
+        
+        # Excel faylni o'qish
+        df = pd.read_excel(file)
+        
+        # Ustunlarni tekshirish
+        required_columns = [
+            'P/N(Cihaz Adı)', 'COMPANY(marka)', 'MODEL(Model)', 
+            'S/N(Seri Numarası)', 'rangi(Renk)', 'ин/в(Envanter Numarası)',
+            'O\'lchov birligi(Miktar)', 'Holati(durum)', 'Kim foydalanayapti(Kim kullanmış)'
+        ]
+        
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return jsonify({
+                'success': False, 
+                'message': f'Quyidagi ustunlar topilmadi: {", ".join(missing_columns)}'
+            })
+        
+        # Xona va qavat ma'lumotlarini olish
+        room_id = request.form.get('room_id')
+        floor_id = request.form.get('floor_id')
+        
+        if not room_id:
+            return jsonify({'success': False, 'message': 'Xona tanlanmagan'})
+        
+        room = Room.query.get(room_id)
+        if not room:
+            return jsonify({'success': False, 'message': 'Xona topilmadi'})
+        
+        # Ma'lumotlarni import qilish
+        imported_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                # Ma'lumotlarni tozalash
+                name = str(row['P/N(Cihaz Adı)']).strip() if pd.notna(row['P/N(Cihaz Adı)']) else ''
+                brand = str(row['COMPANY(marka)']).strip() if pd.notna(row['COMPANY(marka)']) else ''
+                model = str(row['MODEL(Model)']).strip() if pd.notna(row['MODEL(Model)']) else ''
+                serial_number = str(row['S/N(Seri Numarası)']).strip() if pd.notna(row['S/N(Seri Numarası)']) else ''
+                color = str(row['rangi(Renk)']).strip() if pd.notna(row['rangi(Renk)']) else ''
+                inv_code = str(row['ин/в(Envanter Numarası)']).strip() if pd.notna(row['ин/в(Envanter Numarası)']) else ''
+                quantity = str(row['O\'lchov birligi(Miktar)']).strip() if pd.notna(row['O\'lchov birligi(Miktar)']) else ''
+                status = str(row['Holati(durum)']).strip() if pd.notna(row['Holati(durum)']) else 'Active'
+                user = str(row['Kim foydalanayapti(Kim kullanmış)']).strip() if pd.notna(row['Kim foydalanayapti(Kim kullanmış)']) else ''
+                
+                if not name:
+                    errors.append(f'Satr {index + 2}: Jihoz nomi bo\'sh')
+                    continue
+                
+                # Inventarizatsiya kodi yaratish
+                if not inv_code:
+                    equipment_count = Equipment.query.filter_by(room_id=room_id).count() + 1
+                    inv_code = f"{room.organization.name[:3].upper()}-{room.name[:3].upper()}-{equipment_count:04d}"
+                
+                # Jihoz yaratish
+                equipment = Equipment(
+                    inv_code=inv_code,
+                    name=name,
+                    category='Import',  # Import qilingan jihozlar uchun
+                    brand=brand,
+                    model=model,
+                    serial_number=serial_number,
+                    color=color,
+                    status=status,
+                    description=f"Miqdor: {quantity}\nFoydalanuvchi: {user}",
+                    room_id=room_id
+                )
+                
+                db.session.add(equipment)
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f'Satr {index + 2}: {str(e)}')
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{imported_count} ta jihoz muvaffaqiyatli import qilindi',
+            'imported_count': imported_count,
+            'errors': errors[:10]  # Faqat birinchi 10 ta xatolik
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Import xatoligi: {str(e)}'})
 
 # Excel export funksiyasi
 def create_excel_export(organization_id):
