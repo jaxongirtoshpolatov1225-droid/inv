@@ -21,8 +21,44 @@
         </div>
 
         {% if equipment %}
+            <!-- Filter qismi -->
+            <div class="row mb-3 filter-section">
+                <div class="col-md-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Qidirish...">
+                </div>
+                <div class="col-md-2">
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">Barcha kategoriyalar</option>
+                        <option value="Texnika">Texnika</option>
+                        <option value="Mebel">Mebel</option>
+                        <option value="Asbob">Asbob</option>
+                        <option value="Boshqa">Boshqa</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">Barcha holatlar</option>
+                        <option value="Active">Faol</option>
+                        <option value="Inactive">Nofaol</option>
+                        <option value="Broken">Yaroqsiz</option>
+                        <option value="Repair">Ta'mirlashda</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button id="clearFilters" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Tozalash
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">
+                        Jami: <span id="totalCount">{{ equipment|length }}</span> | 
+                        Ko'rsatilmoqda: <span id="visibleCount">{{ equipment|length }}</span>
+                    </small>
+                </div>
+            </div>
+
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover" id="equipmentTable">
                     <thead>
                         <tr>
                             <th>Inv kode</th>
@@ -224,6 +260,74 @@
 
 {% block scripts %}
 <script>
+// Filter funksiyalari
+function filterTable() {
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    const table = document.getElementById('equipmentTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    let visibleCount = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        
+        // Qidirish matni
+        const searchText = cells[1].textContent.toLowerCase(); // Nomi
+        const invCode = cells[0].textContent.toLowerCase(); // Inv kode
+        
+        // Kategoriya
+        const category = cells[2].textContent.trim();
+        
+        // Holat
+        const status = cells[5].textContent.trim();
+        
+        // Filter shartlari
+        const matchesSearch = searchText.includes(searchInput) || invCode.includes(searchInput);
+        const matchesCategory = !categoryFilter || category === categoryFilter;
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        if (matchesSearch && matchesCategory && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    }
+    
+    // Ko'rsatilayotgan sonni yangilash
+    document.getElementById('visibleCount').textContent = visibleCount;
+}
+
+// Event listenerlar
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const clearFilters = document.getElementById('clearFilters');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+    }
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', filterTable);
+    }
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterTable);
+    }
+    if (clearFilters) {
+        clearFilters.addEventListener('click', function() {
+            searchInput.value = '';
+            categoryFilter.value = '';
+            statusFilter.value = '';
+            filterTable();
+        });
+    }
+});
+
 function addEquipment() {
     const name = document.getElementById('equipmentName').value;
     const category = document.getElementById('equipmentCategory').value;

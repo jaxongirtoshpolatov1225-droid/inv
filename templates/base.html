@@ -137,6 +137,25 @@
         .navbar-nav .bi {
             color: white;
         }
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .filter-section .form-control,
+        .filter-section .form-select {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+        .filter-section .form-control:focus,
+        .filter-section .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        .table-row-hidden {
+            display: none !important;
+        }
     </style>
     {% block scripts %}{% endblock %}
 </body>
