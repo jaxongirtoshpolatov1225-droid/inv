@@ -53,8 +53,7 @@ class Equipment(db.Model):
     brand = db.Column(db.String(100))
     model = db.Column(db.String(100))
     serial_number = db.Column(db.String(100))
-    purchase_date = db.Column(db.Date)
-    price = db.Column(db.Float)
+    color = db.Column(db.String(50))
     status = db.Column(db.String(50), default='Active')
     description = db.Column(db.Text)
     room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
@@ -159,8 +158,7 @@ def add_equipment():
         brand=data.get('brand'),
         model=data.get('model'),
         serial_number=data.get('serial_number'),
-        purchase_date=datetime.strptime(data['purchase_date'], '%Y-%m-%d').date() if data.get('purchase_date') else None,
-        price=float(data['price']) if data.get('price') else None,
+        color=data.get('color'),
         status=data.get('status', 'Active'),
         description=data.get('description'),
         room_id=data['room_id']
@@ -207,13 +205,93 @@ def get_equipment(equipment_id):
         'brand': equipment.brand,
         'model': equipment.model,
         'serial_number': equipment.serial_number,
-        'purchase_date': equipment.purchase_date.isoformat() if equipment.purchase_date else None,
-        'price': equipment.price,
+        'color': equipment.color,
         'status': equipment.status,
         'description': equipment.description,
         'room_name': equipment.room.name,
         'organization_name': equipment.room.organization.name
     })
+
+# Jihoz ma'lumotlarini yangilash
+@app.route('/update_equipment/<int:equipment_id>', methods=['PUT'])
+def update_equipment(equipment_id):
+    equipment = Equipment.query.get_or_404(equipment_id)
+    data = request.get_json()
+    
+    # Ma'lumotlarni yangilash
+    equipment.name = data.get('name', equipment.name)
+    equipment.category = data.get('category', equipment.category)
+    equipment.brand = data.get('brand', equipment.brand)
+    equipment.model = data.get('model', equipment.model)
+    equipment.serial_number = data.get('serial_number', equipment.serial_number)
+    equipment.color = data.get('color', equipment.color)
+    equipment.status = data.get('status', equipment.status)
+    equipment.description = data.get('description', equipment.description)
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Jihoz ma\'lumotlari yangilandi'})
+
+# Jihozni o'chirish
+@app.route('/delete_equipment/<int:equipment_id>', methods=['DELETE'])
+def delete_equipment(equipment_id):
+    equipment = Equipment.query.get_or_404(equipment_id)
+    db.session.delete(equipment)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Jihoz o\'chirildi'})
+
+# Jihoz transfer qilish
+@app.route('/transfer_equipment/<int:equipment_id>', methods=['POST'])
+def transfer_equipment(equipment_id):
+    equipment = Equipment.query.get_or_404(equipment_id)
+    data = request.get_json()
+    
+    new_room_id = data.get('room_id')
+    if not new_room_id:
+        return jsonify({'success': False, 'message': 'Yangi xona tanlanmagan'})
+    
+    # Yangi xonani tekshirish
+    new_room = Room.query.get(new_room_id)
+    if not new_room:
+        return jsonify({'success': False, 'message': 'Xona topilmadi'})
+    
+    # Eski xona va yangi xona bir xil bo'lmasligi kerak
+    if equipment.room_id == new_room_id:
+        return jsonify({'success': False, 'message': 'Jihoz allaqachon bu xonada'})
+    
+    # Jihozni yangi xonaga ko'chirish
+    old_room_name = equipment.room.name
+    equipment.room_id = new_room_id
+    
+    # Inventarizatsiya kodini yangilash
+    org = equipment.room.organization
+    equipment_count = Equipment.query.filter_by(room_id=new_room_id).count()
+    equipment.inv_code = f"{org.name[:3].upper()}-{new_room.name[:3].upper()}-{equipment_count:04d}"
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Jihoz "{old_room_name}" dan "{new_room.name}" ga ko\'chirildi',
+        'new_inv_code': equipment.inv_code
+    })
+
+# Xonalar ro'yxatini olish (transfer uchun)
+@app.route('/get_rooms/<int:organization_id>')
+def get_rooms(organization_id):
+    rooms = Room.query.filter_by(organization_id=organization_id).all()
+    room_list = []
+    
+    for room in rooms:
+        room_data = {
+            'id': room.id,
+            'name': room.name,
+            'floor_name': room.floor.name if room.floor else None
+        }
+        room_list.append(room_data)
+    
+    return jsonify(room_list)
 
 # Excel export funksiyasi
 def create_excel_export(organization_id):
@@ -281,9 +359,8 @@ def write_room_data_to_sheet(ws, room, header_font, header_fill, border):
     
     # Sarlavhalar
     headers = [
-        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model', 
-        'Seriya Raqami', 'Sotib Olingan Sana', 'Narx', 
-        'Holat', 'Tavsif'
+        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model',
+        'Seriya Raqami', 'Rang', 'Holat', 'Tavsif'
     ]
     
     # Sarlavhalarni yozish
@@ -305,8 +382,7 @@ def write_room_data_to_sheet(ws, room, header_font, header_fill, border):
             equipment.brand or '',
             equipment.model or '',
             equipment.serial_number or '',
-            equipment.purchase_date.strftime('%d.%m.%Y') if equipment.purchase_date else '',
-            f"{equipment.price:,.0f} so'm" if equipment.price else '',
+            equipment.color or '',
             equipment.status,
             equipment.description or ''
         ]
@@ -380,9 +456,8 @@ def create_room_excel_export(room_id):
     
     # Sarlavhalar
     headers = [
-        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model', 
-        'Seriya Raqami', 'Sotib Olingan Sana', 'Narx', 
-        'Holat', 'Tavsif'
+        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model',
+        'Seriya Raqami', 'Rang', 'Holat', 'Tavsif'
     ]
     
     # Sarlavhalarni yozish
@@ -404,8 +479,7 @@ def create_room_excel_export(room_id):
             equipment.brand or '',
             equipment.model or '',
             equipment.serial_number or '',
-            equipment.purchase_date.strftime('%d.%m.%Y') if equipment.purchase_date else '',
-            f"{equipment.price:,.0f} so'm" if equipment.price else '',
+            equipment.color or '',
             equipment.status,
             equipment.description or ''
         ]

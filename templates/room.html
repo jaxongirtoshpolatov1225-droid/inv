@@ -88,14 +88,23 @@
                                     {{ item.status }}
                                 </span>
                             </td>
-                            <td>
-                                <button class="btn btn-sm btn-info" onclick="viewEquipment({{ item.id }})">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-success" onclick="generateQR({{ item.id }})">
-                                    <i class="bi bi-qr-code"></i>
-                                </button>
-                            </td>
+                           <td>
+                               <button class="btn btn-sm btn-info" onclick="viewEquipment({{ item.id }})" title="Ko'rish">
+                                   <i class="bi bi-eye"></i>
+                               </button>
+                               <button class="btn btn-sm btn-warning" onclick="editEquipment({{ item.id }})" title="Tahrirlash">
+                                   <i class="bi bi-pencil"></i>
+                               </button>
+                               <button class="btn btn-sm btn-success" onclick="generateQR({{ item.id }})" title="QR kod">
+                                   <i class="bi bi-qr-code"></i>
+                               </button>
+                               <button class="btn btn-sm btn-info" onclick="transferEquipment({{ item.id }})" title="Ko'chirish">
+                                   <i class="bi bi-arrow-right-circle"></i>
+                               </button>
+                               <button class="btn btn-sm btn-danger" onclick="deleteEquipment({{ item.id }})" title="O'chirish">
+                                   <i class="bi bi-trash"></i>
+                               </button>
+                           </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -185,18 +194,12 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="purchaseDate" class="form-label">Sotib olingan sana</label>
-                                        <input type="date" class="form-control" id="purchaseDate">
+                                        <label for="color" class="form-label">Rang</label>
+                                        <input type="text" class="form-control" id="color" placeholder="Masalan: Qora, Oq, Qizil">
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="price" class="form-label">Narx</label>
-                                        <input type="number" class="form-control" id="price" step="0.01">
-                                    </div>
-                                </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="status" class="form-label">Holat</label>
@@ -257,6 +260,139 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
                 <button type="button" class="btn btn-primary" onclick="printQR()">Chop etish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Jihoz tahrirlash modali -->
+<div class="modal fade" id="editEquipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Jihoz tahrirlash</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="editTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="edit-basic-tab" data-bs-toggle="tab" data-bs-target="#edit-basic" type="button" role="tab">
+                            Asosiy ma'lumotlar
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="edit-additional-tab" data-bs-toggle="tab" data-bs-target="#edit-additional" type="button" role="tab">
+                            Qo'shimcha ma'lumotlar
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="editTabContent">
+                    <div class="tab-pane fade show active" id="edit-basic" role="tabpanel">
+                        <form id="editBasicForm">
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEquipmentName" class="form-label">Jihoz nomi *</label>
+                                        <input type="text" class="form-control" id="editEquipmentName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEquipmentCategory" class="form-label">Kategoriya *</label>
+                                        <select class="form-select" id="editEquipmentCategory" required>
+                                            <option value="">Tanlang</option>
+                                            <option value="Texnika">Texnika</option>
+                                            <option value="Mebel">Mebel</option>
+                                            <option value="Asbob">Asbob</option>
+                                            <option value="Boshqa">Boshqa</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEquipmentBrand" class="form-label">Brend</label>
+                                        <input type="text" class="form-control" id="editEquipmentBrand">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEquipmentModel" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="editEquipmentModel">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="edit-additional" role="tabpanel">
+                        <form id="editAdditionalForm">
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editSerialNumber" class="form-label">Seriya raqami</label>
+                                        <input type="text" class="form-control" id="editSerialNumber">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editColor" class="form-label">Rang</label>
+                                        <input type="text" class="form-control" id="editColor" placeholder="Masalan: Qora, Oq, Qizil">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editStatus" class="form-label">Holat</label>
+                                        <select class="form-select" id="editStatus">
+                                            <option value="Active">Faol</option>
+                                            <option value="Inactive">Nofaol</option>
+                                            <option value="Broken">Yaroqsiz</option>
+                                            <option value="Repair">Ta'mirlashda</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editDescription" class="form-label">Tavsif</label>
+                                <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" class="btn btn-primary" onclick="updateEquipment()">Yangilash</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Jihoz transfer modali -->
+<div class="modal fade" id="transferEquipmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Jihoz ko'chirish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="transferRoomSelect" class="form-label">Yangi xona</label>
+                    <select class="form-select" id="transferRoomSelect" required>
+                        <option value="">Xona tanlang</option>
+                    </select>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Eslatma:</strong> Jihoz ko'chirilganda inventarizatsiya kodi yangilanadi.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" class="btn btn-primary" onclick="confirmTransfer()">Ko'chirish</button>
             </div>
         </div>
     </div>
@@ -339,8 +475,7 @@ function addEquipment() {
     const brand = document.getElementById('equipmentBrand').value;
     const model = document.getElementById('equipmentModel').value;
     const serialNumber = document.getElementById('serialNumber').value;
-    const purchaseDate = document.getElementById('purchaseDate').value;
-    const price = document.getElementById('price').value;
+    const color = document.getElementById('color').value;
     const status = document.getElementById('status').value;
     const description = document.getElementById('description').value;
     
@@ -360,8 +495,7 @@ function addEquipment() {
             brand: brand,
             model: model,
             serial_number: serialNumber,
-            purchase_date: purchaseDate,
-            price: price,
+            color: color,
             status: status,
             description: description,
             organization_id: {{ room.organization.id }},
@@ -399,8 +533,7 @@ function viewEquipment(equipmentId) {
                 <div class="col-md-6">
                     <h6>Qo'shimcha ma'lumotlar</h6>
                     <p><strong>Seriya raqami:</strong> ${data.serial_number || '-'}</p>
-                    <p><strong>Sotib olingan sana:</strong> ${data.purchase_date || '-'}</p>
-                    <p><strong>Narx:</strong> ${data.price ? data.price + ' so\'m' : '-'}</p>
+                    <p><strong>Rang:</strong> ${data.color || '-'}</p>
                     <p><strong>Holat:</strong> ${data.status}</p>
                     <p><strong>Tavsif:</strong> ${data.description || '-'}</p>
                 </div>
@@ -421,6 +554,173 @@ function viewEquipment(equipmentId) {
         console.error('Xatolik:', error);
         alert('Xatolik yuz berdi!');
     });
+}
+
+// Jihoz tahrirlash
+let currentEditId = null;
+
+function editEquipment(equipmentId) {
+    currentEditId = equipmentId;
+    
+    // Jihoz ma'lumotlarini olish
+    fetch(`/equipment/${equipmentId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Form maydonlarini to'ldirish
+            document.getElementById('editEquipmentName').value = data.name;
+            document.getElementById('editEquipmentCategory').value = data.category;
+            document.getElementById('editEquipmentBrand').value = data.brand || '';
+            document.getElementById('editEquipmentModel').value = data.model || '';
+            document.getElementById('editSerialNumber').value = data.serial_number || '';
+            document.getElementById('editColor').value = data.color || '';
+            document.getElementById('editStatus').value = data.status;
+            document.getElementById('editDescription').value = data.description || '';
+            
+            // Modalni ochish
+            const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
+            editModal.show();
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Jihoz ma\'lumotlarini olishda xatolik!');
+        });
+}
+
+// Jihoz yangilash
+function updateEquipment() {
+    if (!currentEditId) return;
+    
+    const name = document.getElementById('editEquipmentName').value;
+    const category = document.getElementById('editEquipmentCategory').value;
+    const brand = document.getElementById('editEquipmentBrand').value;
+    const model = document.getElementById('editEquipmentModel').value;
+    const serialNumber = document.getElementById('editSerialNumber').value;
+    const color = document.getElementById('editColor').value;
+    const status = document.getElementById('editStatus').value;
+    const description = document.getElementById('editDescription').value;
+    
+    if (!name.trim() || !category) {
+        alert('Jihoz nomi va kategoriyasi kiritilishi shart!');
+        return;
+    }
+    
+    fetch(`/update_equipment/${currentEditId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            category: category,
+            brand: brand,
+            model: model,
+            serial_number: serialNumber,
+            color: color,
+            status: status,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Jihoz ma\'lumotlari yangilandi!');
+            location.reload();
+        } else {
+            alert('Xatolik: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Jihoz yangilashda xatolik!');
+    });
+}
+
+// Jihoz o'chirish
+function deleteEquipment(equipmentId) {
+    if (confirm('Bu jihozni o\'chirishni xohlaysizmi?')) {
+        fetch(`/delete_equipment/${equipmentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Jihoz o\'chirildi!');
+                location.reload();
+            } else {
+                alert('Xatolik: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Jihoz o\'chirishda xatolik!');
+        });
+    }
+}
+
+// Jihoz transfer
+let currentTransferId = null;
+
+function transferEquipment(equipmentId) {
+    currentTransferId = equipmentId;
+    
+    // Xonalar ro'yxatini olish
+    fetch(`/get_rooms/{{ room.organization.id }}`)
+        .then(response => response.json())
+        .then(rooms => {
+            const select = document.getElementById('transferRoomSelect');
+            select.innerHTML = '<option value="">Xona tanlang</option>';
+            
+            rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.id;
+                option.textContent = room.floor_name ? `${room.floor_name} - ${room.name}` : room.name;
+                select.appendChild(option);
+            });
+            
+            // Modalni ochish
+            const transferModal = new bootstrap.Modal(document.getElementById('transferEquipmentModal'));
+            transferModal.show();
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Xonalar ro\'yxatini olishda xatolik!');
+        });
+}
+
+// Transfer tasdiqlash
+function confirmTransfer() {
+    if (!currentTransferId) return;
+    
+    const newRoomId = document.getElementById('transferRoomSelect').value;
+    if (!newRoomId) {
+        alert('Yangi xona tanlang!');
+        return;
+    }
+    
+    if (confirm('Jihozni ko\'chirishni tasdiqlaysizmi?')) {
+        fetch(`/transfer_equipment/${currentTransferId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                room_id: parseInt(newRoomId)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Xatolik: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Jihoz ko\'chirishda xatolik!');
+        });
+    }
 }
 
 function generateQR(equipmentId) {
