@@ -9,6 +9,7 @@ Bu loyiha Python Flask va Bootstrap yordamida yaratilgan inventarizatsiya boshqa
 - **Xona boshqaruvi**: Har bir qavatda yoki to'g'ridan-to'g'ri tashkilotda xonalar qo'shish
 - **Jihoz boshqaruvi**: Har bir xonada jihozlar ro'yxatini boshqarish
 - **QR kod yaratish**: Har bir jihoz uchun inventarizatsiya QR kodi yaratish
+- **Excel export**: Barcha ma'lumotlarni Excel faylga export qilish
 - **Ikki tabli ma'lumot kiritish**: Asosiy va qo'shimcha ma'lumotlar
 
 ## O'rnatish
@@ -22,7 +23,7 @@ cd inv
 
 2. Kerakli kutubxonalarni o'rnating:
 ```bash
-pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow
+pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow openpyxl
 ```
 
 3. Loyihani ishga tushiring:
@@ -47,7 +48,7 @@ inv_launcher_windows.bat
 
 **Yoki to'g'ridan-to'g'ri:**
 ```cmd
-pip install flask flask-sqlalchemy flask-cors qrcode pillow
+pip install flask flask-sqlalchemy flask-cors qrcode pillow openpyxl
 python app.py
 ```
 
@@ -82,6 +83,12 @@ python app.py
 ### 5. QR kod yaratish
 - Jihoz ro'yxatida "QR kod" tugmasini bosing
 - QR kod avtomatik yaratiladi va chop etish mumkin
+
+### 6. Excel export
+- Tashkilot sahifasida "Excel Export" tugmasini bosing
+- Excel fayl avtomatik yuklab olinadi
+- Har bir xona alohida sheet da ko'rsatiladi
+- Qavatli tashkilotlarda: "Qavat - Xona" formatida
 
 ## Ma'lumotlar bazasi
 

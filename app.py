@@ -6,6 +6,9 @@ import io
 import base64
 from datetime import datetime
 import os
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
@@ -211,6 +214,135 @@ def get_equipment(equipment_id):
         'room_name': equipment.room.name,
         'organization_name': equipment.room.organization.name
     })
+
+# Excel export funksiyasi
+def create_excel_export(organization_id):
+    """Tashkilot ma'lumotlarini Excel faylga export qilish"""
+    organization = Organization.query.get_or_404(organization_id)
+    
+    # Yangi Excel workbook yaratish
+    wb = Workbook()
+    
+    # Default sheet ni o'chirish
+    wb.remove(wb.active)
+    
+    # Stil parametrlari
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    if organization.has_floors:
+        # Qavatli tashkilot uchun
+        floors = Floor.query.filter_by(organization_id=organization_id).all()
+        
+        for floor in floors:
+            rooms = Room.query.filter_by(floor_id=floor.id).all()
+            
+            for room in rooms:
+                # Sheet nomi: "Qavat - Xona"
+                sheet_name = f"{floor.name} - {room.name}"
+                # Excel sheet nomi cheklovlari (31 ta belgi)
+                if len(sheet_name) > 31:
+                    sheet_name = sheet_name[:31]
+                
+                ws = wb.create_sheet(title=sheet_name)
+                
+                # Ma'lumotlarni yozish
+                write_room_data_to_sheet(ws, room, header_font, header_fill, border)
+    else:
+        # Oddiy tashkilot uchun
+        rooms = Room.query.filter_by(organization_id=organization_id, floor_id=None).all()
+        
+        for room in rooms:
+            # Sheet nomi: faqat xona nomi
+            sheet_name = room.name
+            if len(sheet_name) > 31:
+                sheet_name = sheet_name[:31]
+            
+            ws = wb.create_sheet(title=sheet_name)
+            
+            # Ma'lumotlarni yozish
+            write_room_data_to_sheet(ws, room, header_font, header_fill, border)
+    
+    # Excel faylni memory ga yozish
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return output
+
+def write_room_data_to_sheet(ws, room, header_font, header_fill, border):
+    """Xona ma'lumotlarini sheet ga yozish"""
+    
+    # Sarlavhalar
+    headers = [
+        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model', 
+        'Seriya Raqami', 'Sotib Olingan Sana', 'Narx', 
+        'Holat', 'Tavsif'
+    ]
+    
+    # Sarlavhalarni yozish
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+    
+    # Jihozlar ma'lumotlarini yozish
+    equipment_list = Equipment.query.filter_by(room_id=room.id).all()
+    
+    for row, equipment in enumerate(equipment_list, 2):
+        data = [
+            equipment.inv_code,
+            equipment.name,
+            equipment.category,
+            equipment.brand or '',
+            equipment.model or '',
+            equipment.serial_number or '',
+            equipment.purchase_date.strftime('%d.%m.%Y') if equipment.purchase_date else '',
+            f"{equipment.price:,.0f} so'm" if equipment.price else '',
+            equipment.status,
+            equipment.description or ''
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.border = border
+            cell.alignment = Alignment(vertical='center')
+    
+    # Ustunlarni kengaytirish
+    for col in range(1, len(headers) + 1):
+        column_letter = get_column_letter(col)
+        ws.column_dimensions[column_letter].width = 15
+
+# Excel export endpoint
+@app.route('/export_excel/<int:organization_id>')
+def export_excel(organization_id):
+    """Tashkilot ma'lumotlarini Excel faylga export qilish"""
+    try:
+        organization = Organization.query.get_or_404(organization_id)
+        
+        # Excel fayl yaratish
+        excel_file = create_excel_export(organization_id)
+        
+        # Fayl nomi
+        filename = f"{organization.name}_inventarizatsiya.xlsx"
+        
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

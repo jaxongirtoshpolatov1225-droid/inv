@@ -26,14 +26,14 @@ if (-not (Test-Path "app.py")) {
 Write-Host "📦 Kutubxonalarni tekshirish..." -ForegroundColor Yellow
 
 try {
-    python -c "import flask, flask_sqlalchemy, flask_cors, qrcode, PIL" 2>$null
+    python -c "import flask, flask_sqlalchemy, flask_cors, qrcode, PIL, openpyxl" 2>$null
     Write-Host "✅ Barcha kutubxonalar mavjud" -ForegroundColor Green
 } catch {
     Write-Host "❌ Ba'zi kutubxonalar topilmadi!" -ForegroundColor Red
     Write-Host "📦 Kutubxonalarni o'rnatish..." -ForegroundColor Yellow
     
     try {
-        pip install flask flask-sqlalchemy flask-cors qrcode pillow
+        pip install flask flask-sqlalchemy flask-cors qrcode pillow openpyxl
         Write-Host "✅ Kutubxonalar o'rnatildi!" -ForegroundColor Green
     } catch {
         Write-Host "❌ Kutubxonalar o'rnatilmadi!" -ForegroundColor Red

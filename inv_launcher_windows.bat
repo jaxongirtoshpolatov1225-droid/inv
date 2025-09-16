@@ -21,11 +21,11 @@ if not exist "app.py" (
 
 REM Kutubxonalarni tekshirish va o'rnatish
 echo 📦 Kutubxonalarni tekshirish...
-python -c "import flask, flask_sqlalchemy, flask_cors, qrcode, PIL" >nul 2>&1
+python -c "import flask, flask_sqlalchemy, flask_cors, qrcode, PIL, openpyxl" >nul 2>&1
 if errorlevel 1 (
     echo ❌ Ba'zi kutubxonalar topilmadi!
     echo 📦 Kutubxonalarni o'rnatish...
-    pip install flask flask-sqlalchemy flask-cors qrcode pillow
+    pip install flask flask-sqlalchemy flask-cors qrcode pillow openpyxl
     if errorlevel 1 (
         echo ❌ Kutubxonalar o'rnatilmadi!
         pause

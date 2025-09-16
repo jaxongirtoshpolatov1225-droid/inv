@@ -20,7 +20,8 @@ def check_dependencies():
         'flask_sqlalchemy', 
         'flask_cors',
         'qrcode',
-        'PIL'
+        'PIL',
+        'openpyxl'
     ]
     
     missing_packages = []
@@ -41,9 +42,9 @@ def check_dependencies():
         
         print("\n📦 Kutubxonalarni o'rnatish uchun:")
         if platform.system() == "Windows":
-            print("   pip install flask flask-sqlalchemy flask-cors qrcode pillow")
+            print("   pip install flask flask-sqlalchemy flask-cors qrcode pillow openpyxl")
         else:
-            print("   pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow")
+            print("   pip install --user --break-system-packages flask flask-sqlalchemy flask-cors qrcode pillow openpyxl")
         
         print("\n🔄 Avtomatik o'rnatish uchun 'y' bosing, bekor qilish uchun 'n':")
         choice = input().lower().strip()
@@ -65,9 +66,9 @@ def install_dependencies():
     
     try:
         if platform.system() == "Windows":
-            cmd = ["pip", "install", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow"]
+            cmd = ["pip", "install", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow", "openpyxl"]
         else:
-            cmd = ["pip", "install", "--user", "--break-system-packages", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow"]
+            cmd = ["pip", "install", "--user", "--break-system-packages", "flask", "flask-sqlalchemy", "flask-cors", "qrcode", "pillow", "openpyxl"]
         
         result = subprocess.run(cmd, capture_output=True, text=True)
         
