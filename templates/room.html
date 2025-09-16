@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.name }} - Jihozlar{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Bosh sahifa</a></li>
+                <li class="breadcrumb-item"><a href="/organization/{{ room.organization.id }}">{{ room.organization.name }}</a></li>
+                <li class="breadcrumb-item active">{{ room.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-home"></i> {{ room.name }} - Jihozlar</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                <i class="fas fa-plus"></i> Yangi jihoz qo'shish
+            </button>
+        </div>
+
+        {% if equipment %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Inv kode</th>
+                            <th>Nomi</th>
+                            <th>Kategoriya</th>
+                            <th>Brend</th>
+                            <th>Model</th>
+                            <th>Holat</th>
+                            <th>Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in equipment %}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ item.inv_code }}</span></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category }}</td>
+                            <td>{{ item.brand or '-' }}</td>
+                            <td>{{ item.model or '-' }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if item.status == 'Active' else 'warning' }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewEquipment({{ item.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="generateQR({{ item.id }})">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                <h3 class="text-muted">Hozircha jihoz yo'q</h3>
+                <p class="text-muted">Birinchi jihozni qo'shing</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                    <i class="fas fa-plus"></i> Jihoz qo'shish
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Jihoz qo'shish modali -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yangi jihoz qo'shish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="equipmentTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                            Asosiy ma'lumotlar
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="additional-tab" data-bs-toggle="tab" data-bs-target="#additional" type="button" role="tab">
+                            Qo'shimcha ma'lumotlar
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="equipmentTabContent">
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        <form id="addEquipmentForm">
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="equipmentName" class="form-label">Jihoz nomi *</label>
+                                        <input type="text" class="form-control" id="equipmentName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="equipmentCategory" class="form-label">Kategoriya *</label>
+                                        <select class="form-select" id="equipmentCategory" required>
+                                            <option value="">Tanlang</option>
+                                            <option value="Texnika">Texnika</option>
+                                            <option value="Mebel">Mebel</option>
+                                            <option value="Asbob">Asbob</option>
+                                            <option value="Boshqa">Boshqa</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="equipmentBrand" class="form-label">Brend</label>
+                                        <input type="text" class="form-control" id="equipmentBrand">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="equipmentModel" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="equipmentModel">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="additional" role="tabpanel">
+                        <form id="additionalForm">
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="serialNumber" class="form-label">Seriya raqami</label>
+                                        <input type="text" class="form-control" id="serialNumber">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="purchaseDate" class="form-label">Sotib olingan sana</label>
+                                        <input type="date" class="form-control" id="purchaseDate">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Narx</label>
+                                        <input type="number" class="form-control" id="price" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">Holat</label>
+                                        <select class="form-select" id="status">
+                                            <option value="Active">Faol</option>
+                                            <option value="Inactive">Nofaol</option>
+                                            <option value="Broken">Yaroqsiz</option>
+                                            <option value="Repair">Ta'mirlashda</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Tavsif</label>
+                                <textarea class="form-control" id="description" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" class="btn btn-primary" onclick="addEquipment()">Qo'shish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Jihoz ma'lumotlarini ko'rish modali -->
+<div class="modal fade" id="viewEquipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Jihoz ma'lumotlari</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="equipmentDetails">
+                <!-- Ma'lumotlar bu yerda ko'rsatiladi -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR kod modali -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">QR kod</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrCodeContainer">
+                    <!-- QR kod bu yerda ko'rsatiladi -->
+                </div>
+                <p class="mt-3" id="qrCodeText"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
+                <button type="button" class="btn btn-primary" onclick="printQR()">Chop etish</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addEquipment() {
+    const name = document.getElementById('equipmentName').value;
+    const category = document.getElementById('equipmentCategory').value;
+    const brand = document.getElementById('equipmentBrand').value;
+    const model = document.getElementById('equipmentModel').value;
+    const serialNumber = document.getElementById('serialNumber').value;
+    const purchaseDate = document.getElementById('purchaseDate').value;
+    const price = document.getElementById('price').value;
+    const status = document.getElementById('status').value;
+    const description = document.getElementById('description').value;
+    
+    if (!name.trim() || !category) {
+        alert('Jihoz nomi va kategoriyasi kiritilishi shart!');
+        return;
+    }
+    
+    fetch('/add_equipment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            category: category,
+            brand: brand,
+            model: model,
+            serial_number: serialNumber,
+            purchase_date: purchaseDate,
+            price: price,
+            status: status,
+            description: description,
+            organization_id: {{ room.organization.id }},
+            room_id: {{ room.id }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Xatolik: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Xatolik yuz berdi!');
+    });
+}
+
+function viewEquipment(equipmentId) {
+    fetch(`/equipment/${equipmentId}`)
+    .then(response => response.json())
+    .then(data => {
+        const details = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Asosiy ma'lumotlar</h6>
+                    <p><strong>Inv kode:</strong> ${data.inv_code}</p>
+                    <p><strong>Nomi:</strong> ${data.name}</p>
+                    <p><strong>Kategoriya:</strong> ${data.category}</p>
+                    <p><strong>Brend:</strong> ${data.brand || '-'}</p>
+                    <p><strong>Model:</strong> ${data.model || '-'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Qo'shimcha ma'lumotlar</h6>
+                    <p><strong>Seriya raqami:</strong> ${data.serial_number || '-'}</p>
+                    <p><strong>Sotib olingan sana:</strong> ${data.purchase_date || '-'}</p>
+                    <p><strong>Narx:</strong> ${data.price ? data.price + ' so\'m' : '-'}</p>
+                    <p><strong>Holat:</strong> ${data.status}</p>
+                    <p><strong>Tavsif:</strong> ${data.description || '-'}</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <h6>Joylashuv</h6>
+                    <p><strong>Tashkilot:</strong> ${data.organization_name}</p>
+                    <p><strong>Xona:</strong> ${data.room_name}</p>
+                </div>
+            </div>
+        `;
+        document.getElementById('equipmentDetails').innerHTML = details;
+        new bootstrap.Modal(document.getElementById('viewEquipmentModal')).show();
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Xatolik yuz berdi!');
+    });
+}
+
+function generateQR(equipmentId) {
+    fetch(`/generate_qr/${equipmentId}`)
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('qrCodeContainer').innerHTML = `<img src="data:image/png;base64,${data.qr_code}" class="qr-code" alt="QR Code">`;
+        document.getElementById('qrCodeText').textContent = `Inv kode: ${data.inv_code}`;
+        new bootstrap.Modal(document.getElementById('qrModal')).show();
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Xatolik yuz berdi!');
+    });
+}
+
+function printQR() {
+    const qrImage = document.querySelector('#qrCodeContainer img');
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>QR kod chop etish</title>
+                <style>
+                    body { text-align: center; font-family: Arial, sans-serif; }
+                    img { max-width: 300px; height: auto; }
+                </style>
+            </head>
+            <body>
+                <h3>Inventarizatsiya QR kodi</h3>
+                <img src="${qrImage.src}" alt="QR Code">
+                <p>${document.getElementById('qrCodeText').textContent}</p>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+</script>
+{% endblock %}

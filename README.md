@@ -1,50 +1,107 @@
-# Welcome to your Expo app 👋
+# Inventarizatsiya Tizimi
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Bu loyiha Python Flask va Bootstrap yordamida yaratilgan inventarizatsiya boshqarish tizimi.
 
-## Get started
+## Xususiyatlar
 
-1. Install dependencies
+- **Tashkilot boshqaruvi**: Yangi tashkilot qo'shish va ularni boshqarish
+- **Qavat boshqaruvi**: Tashkilotda qavatlar mavjud bo'lsa, ularni boshqarish
+- **Xona boshqaruvi**: Har bir qavatda yoki to'g'ridan-to'g'ri tashkilotda xonalar qo'shish
+- **Jihoz boshqaruvi**: Har bir xonada jihozlar ro'yxatini boshqarish
+- **QR kod yaratish**: Har bir jihoz uchun inventarizatsiya QR kodi yaratish
+- **Ikki tabli ma'lumot kiritish**: Asosiy va qo'shimcha ma'lumotlar
 
-   ```bash
-   npm install
-   ```
+## O'rnatish
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+1. Loyihani klonlang:
 ```bash
-npm run reset-project
+git clone <repository-url>
+cd smart-mony
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Virtual environment yarating:
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# yoki
+venv\Scripts\activate  # Windows
+```
 
-## Learn more
+3. Kerakli kutubxonalarni o'rnating:
+```bash
+pip install -r requirements.txt
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+4. Loyihani ishga tushiring:
+```bash
+python app.py
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+5. Brauzerda oching: `http://localhost:5000`
 
-## Join the community
+## Foydalanish
 
-Join our community of developers creating universal apps.
+### 1. Tashkilot qo'shish
+- Bosh sahifada "Yangi tashkilot qo'shish" tugmasini bosing
+- Tashkilot nomini kiriting
+- Agar tashkilotda qavatlar mavjud bo'lsa, checkboxni belgilang
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 2. Qavat qo'shish (ixtiyoriy)
+- Agar tashkilot qavatli bo'lsa, qavatlar sahifasida yangi qavat qo'shing
+
+### 3. Xona qo'shish
+- Qavat sahifasida yoki to'g'ridan-to'g'ri tashkilot sahifasida xona qo'shing
+
+### 4. Jihoz qo'shish
+- Xona sahifasida "Yangi jihoz qo'shish" tugmasini bosing
+- Asosiy ma'lumotlar tabida:
+  - Jihoz nomi (majburiy)
+  - Kategoriya (majburiy)
+  - Brend va model
+- Qo'shimcha ma'lumotlar tabida:
+  - Seriya raqami
+  - Sotib olingan sana
+  - Narx
+  - Holat
+  - Tavsif
+
+### 5. QR kod yaratish
+- Jihoz ro'yxatida "QR kod" tugmasini bosing
+- QR kod avtomatik yaratiladi va chop etish mumkin
+
+## Ma'lumotlar bazasi
+
+Loyiha SQLite ma'lumotlar bazasidan foydalanadi. Ma'lumotlar `inventory.db` faylida saqlanadi.
+
+## Texnologiyalar
+
+- **Backend**: Python Flask
+- **Frontend**: HTML, CSS, JavaScript, Bootstrap 5
+- **Ma'lumotlar bazasi**: SQLite
+- **QR kod**: qrcode kutubxonasi
+
+## Loyiha tuzilishi
+
+```
+smart-mony/
+├── app.py                 # Asosiy Flask ilovasi
+├── requirements.txt       # Python kutubxonalari
+├── inventory.db          # SQLite ma'lumotlar bazasi (avtomatik yaratiladi)
+├── templates/            # HTML templatelar
+│   ├── base.html
+│   ├── index.html
+│   ├── organization_with_floors.html
+│   ├── organization_direct_rooms.html
+│   ├── floor.html
+│   └── room.html
+└── static/              # Statik fayllar
+    ├── css/
+    └── js/
+```
+
+## Inventarizatsiya kodi formati
+
+Har bir jihoz uchun inventarizatsiya kodi quyidagi formatda yaratiladi:
+`TASHKILOT_QISQARTMASI-XONA_QISQARTMASI-RAQAM`
+
+Masalan: `TOS-101-0001` (Toshkent shahri, 101-xona, 1-jihoz)
