@@ -58,6 +58,23 @@ class Equipment(db.Model):
     description = db.Column(db.Text)
     room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Transfer tarixi bilan bog'lanish
+    transfer_history = db.relationship('TransferHistory', backref='equipment', lazy=True, cascade='all, delete-orphan')
+
+class TransferHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    from_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    to_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    old_inv_code = db.Column(db.String(50), nullable=False)
+    new_inv_code = db.Column(db.String(50), nullable=False)
+    transfer_date = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+    
+    # Xonalar bilan bog'lanish
+    from_room = db.relationship('Room', foreign_keys=[from_room_id], backref='transfers_from')
+    to_room = db.relationship('Room', foreign_keys=[to_room_id], backref='transfers_to')
 
 # Asosiy sahifa
 @app.route('/')
@@ -248,6 +265,8 @@ def transfer_equipment(equipment_id):
     data = request.get_json()
     
     new_room_id = data.get('room_id')
+    notes = data.get('notes', '')
+    
     if not new_room_id:
         return jsonify({'success': False, 'message': 'Yangi xona tanlanmagan'})
     
@@ -260,21 +279,37 @@ def transfer_equipment(equipment_id):
     if equipment.room_id == new_room_id:
         return jsonify({'success': False, 'message': 'Jihoz allaqachon bu xonada'})
     
-    # Jihozni yangi xonaga ko'chirish
+    # Eski ma'lumotlarni saqlash
+    old_room_id = equipment.room_id
     old_room_name = equipment.room.name
+    old_inv_code = equipment.inv_code
+    
+    # Jihozni yangi xonaga ko'chirish
     equipment.room_id = new_room_id
     
     # Inventarizatsiya kodini yangilash
     org = equipment.room.organization
     equipment_count = Equipment.query.filter_by(room_id=new_room_id).count()
-    equipment.inv_code = f"{org.name[:3].upper()}-{new_room.name[:3].upper()}-{equipment_count:04d}"
+    new_inv_code = f"{org.name[:3].upper()}-{new_room.name[:3].upper()}-{equipment_count:04d}"
+    equipment.inv_code = new_inv_code
     
+    # Transfer tarixini saqlash
+    transfer_record = TransferHistory(
+        equipment_id=equipment_id,
+        from_room_id=old_room_id,
+        to_room_id=new_room_id,
+        old_inv_code=old_inv_code,
+        new_inv_code=new_inv_code,
+        notes=notes
+    )
+    
+    db.session.add(transfer_record)
     db.session.commit()
     
     return jsonify({
         'success': True, 
         'message': f'Jihoz "{old_room_name}" dan "{new_room.name}" ga ko\'chirildi',
-        'new_inv_code': equipment.inv_code
+        'new_inv_code': new_inv_code
     })
 
 # Xonalar ro'yxatini olish (transfer uchun)
@@ -292,6 +327,26 @@ def get_rooms(organization_id):
         room_list.append(room_data)
     
     return jsonify(room_list)
+
+# Jihoz transfer tarixini olish
+@app.route('/transfer_history/<int:equipment_id>')
+def get_transfer_history(equipment_id):
+    transfers = TransferHistory.query.filter_by(equipment_id=equipment_id).order_by(TransferHistory.transfer_date.desc()).all()
+    
+    history_list = []
+    for transfer in transfers:
+        history_data = {
+            'id': transfer.id,
+            'from_room': transfer.from_room.name,
+            'to_room': transfer.to_room.name,
+            'old_inv_code': transfer.old_inv_code,
+            'new_inv_code': transfer.new_inv_code,
+            'transfer_date': transfer.transfer_date.strftime('%d.%m.%Y %H:%M'),
+            'notes': transfer.notes or ''
+        }
+        history_list.append(history_data)
+    
+    return jsonify(history_list)
 
 # Excel export funksiyasi
 def create_excel_export(organization_id):

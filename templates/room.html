@@ -101,6 +101,9 @@
                                <button class="btn btn-sm btn-info" onclick="transferEquipment({{ item.id }})" title="Ko'chirish">
                                    <i class="bi bi-arrow-right-circle"></i>
                                </button>
+                               <button class="btn btn-sm btn-secondary" onclick="viewTransferHistory({{ item.id }})" title="Transfer tarixi">
+                                   <i class="bi bi-clock-history"></i>
+                               </button>
                                <button class="btn btn-sm btn-danger" onclick="deleteEquipment({{ item.id }})" title="O'chirish">
                                    <i class="bi bi-trash"></i>
                                </button>
@@ -385,14 +388,42 @@
                         <option value="">Xona tanlang</option>
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="transferNotes" class="form-label">Izoh (ixtiyoriy)</label>
+                    <textarea class="form-control" id="transferNotes" rows="3" placeholder="Ko'chirish sababi yoki qo'shimcha ma'lumotlar..."></textarea>
+                </div>
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i>
-                    <strong>Eslatma:</strong> Jihoz ko'chirilganda inventarizatsiya kodi yangilanadi.
+                    <strong>Eslatma:</strong> Jihoz ko'chirilganda inventarizatsiya kodi yangilanadi va transfer tarixi saqlanadi.
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
                 <button type="button" class="btn btn-primary" onclick="confirmTransfer()">Ko'chirish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer tarixi modali -->
+<div class="modal fade" id="transferHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Transfer tarixi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="transferHistoryContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Yuklanmoqda...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
             </div>
         </div>
     </div>
@@ -692,6 +723,8 @@ function confirmTransfer() {
     if (!currentTransferId) return;
     
     const newRoomId = document.getElementById('transferRoomSelect').value;
+    const notes = document.getElementById('transferNotes').value;
+    
     if (!newRoomId) {
         alert('Yangi xona tanlang!');
         return;
@@ -704,7 +737,8 @@ function confirmTransfer() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                room_id: parseInt(newRoomId)
+                room_id: parseInt(newRoomId),
+                notes: notes
             })
         })
         .then(response => response.json())
@@ -721,6 +755,85 @@ function confirmTransfer() {
             alert('Jihoz ko\'chirishda xatolik!');
         });
     }
+}
+
+// Transfer tarixini ko'rish
+function viewTransferHistory(equipmentId) {
+    fetch(`/transfer_history/${equipmentId}`)
+        .then(response => response.json())
+        .then(history => {
+            const content = document.getElementById('transferHistoryContent');
+            
+            if (history.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">Transfer tarixi yo'q</h5>
+                        <p class="text-muted">Bu jihoz hali hech qachon ko'chirilmagan</p>
+                    </div>
+                `;
+            } else {
+                let historyHtml = '<div class="timeline">';
+                
+                history.forEach((transfer, index) => {
+                    const isLatest = index === 0;
+                    const badgeClass = isLatest ? 'bg-success' : 'bg-secondary';
+                    
+                    historyHtml += `
+                        <div class="timeline-item ${isLatest ? 'latest' : ''}">
+                            <div class="timeline-marker">
+                                <span class="badge ${badgeClass}">${index + 1}</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-arrow-right-circle"></i>
+                                            ${transfer.from_room} → ${transfer.to_room}
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <strong>Eski kod:</strong> ${transfer.old_inv_code}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <strong>Yangi kod:</strong> ${transfer.new_inv_code}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar"></i> ${transfer.transfer_date}
+                                            </small>
+                                        </div>
+                                        ${transfer.notes ? `
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <strong>Izoh:</strong> ${transfer.notes}
+                                                </small>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                historyHtml += '</div>';
+                content.innerHTML = historyHtml;
+            }
+            
+            // Modalni ochish
+            const historyModal = new bootstrap.Modal(document.getElementById('transferHistoryModal'));
+            historyModal.show();
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Transfer tarixini olishda xatolik!');
+        });
 }
 
 function generateQR(equipmentId) {
