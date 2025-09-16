@@ -344,6 +344,115 @@ def export_excel(organization_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Xona uchun Excel export funksiyasi
+def create_room_excel_export(room_id):
+    """Xona ma'lumotlarini Excel faylga export qilish"""
+    room = Room.query.get_or_404(room_id)
+    
+    # Yangi Excel workbook yaratish
+    wb = Workbook()
+    ws = wb.active
+    ws.title = room.name[:31]  # Excel sheet nomi cheklovlari
+    
+    # Stil parametrlari
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Xona ma'lumotlari
+    ws.cell(row=1, column=1, value=f"Xona: {room.name}")
+    ws.cell(row=1, column=1).font = Font(bold=True, size=14)
+    
+    if room.floor:
+        ws.cell(row=2, column=1, value=f"Qavat: {room.floor.name}")
+        ws.cell(row=2, column=1).font = Font(bold=True)
+    
+    ws.cell(row=3, column=1, value=f"Tashkilot: {room.organization.name}")
+    ws.cell(row=3, column=1).font = Font(bold=True)
+    
+    # Bo'sh qator
+    ws.cell(row=4, column=1, value="")
+    
+    # Sarlavhalar
+    headers = [
+        'Inv Kode', 'Nomi', 'Kategoriya', 'Brend', 'Model', 
+        'Seriya Raqami', 'Sotib Olingan Sana', 'Narx', 
+        'Holat', 'Tavsif'
+    ]
+    
+    # Sarlavhalarni yozish
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+    
+    # Jihozlar ma'lumotlarini yozish
+    equipment_list = Equipment.query.filter_by(room_id=room_id).all()
+    
+    for row, equipment in enumerate(equipment_list, 6):
+        data = [
+            equipment.inv_code,
+            equipment.name,
+            equipment.category,
+            equipment.brand or '',
+            equipment.model or '',
+            equipment.serial_number or '',
+            equipment.purchase_date.strftime('%d.%m.%Y') if equipment.purchase_date else '',
+            f"{equipment.price:,.0f} so'm" if equipment.price else '',
+            equipment.status,
+            equipment.description or ''
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.border = border
+            cell.alignment = Alignment(vertical='center')
+    
+    # Ustunlarni kengaytirish
+    for col in range(1, len(headers) + 1):
+        column_letter = get_column_letter(col)
+        ws.column_dimensions[column_letter].width = 15
+    
+    # Excel faylni memory ga yozish
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return output
+
+# Xona uchun Excel export endpoint
+@app.route('/export_room_excel/<int:room_id>')
+def export_room_excel(room_id):
+    """Xona ma'lumotlarini Excel faylga export qilish"""
+    try:
+        room = Room.query.get_or_404(room_id)
+        
+        # Excel fayl yaratish
+        excel_file = create_room_excel_export(room_id)
+        
+        # Fayl nomi
+        if room.floor:
+            filename = f"{room.organization.name}_{room.floor.name}_{room.name}_inventarizatsiya.xlsx"
+        else:
+            filename = f"{room.organization.name}_{room.name}_inventarizatsiya.xlsx"
+        
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
