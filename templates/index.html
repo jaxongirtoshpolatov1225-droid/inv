@@ -43,6 +43,9 @@
                             <a href="/export_excel/{{ org.id }}" class="btn btn-success btn-sm ms-1">
                                 <i class="bi bi-file-earmark-excel"></i> Excel
                             </a>
+                            <button class="btn btn-danger btn-sm ms-1" onclick="deleteOrganization({{ org.id }}, '{{ org.name }}')">
+                                <i class="bi bi-trash"></i> O'chirish
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -127,6 +130,28 @@ function addOrganization() {
         console.error('Xatolik:', error);
         alert('Xatolik yuz berdi!');
     });
+}
+
+// Tashkilotni o'chirish
+function deleteOrganization(orgId, orgName) {
+    if (confirm(`"${orgName}" tashkilotini o'chirishni xohlaysizmi?\n\nEslatma: Barcha qavatlar, xonalar va jihozlar ham o'chiriladi!`)) {
+        fetch(`/delete_organization/${orgId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Tashkilot o\'chirildi!');
+                location.reload();
+            } else {
+                alert('Xatolik: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Tashkilot o\'chirishda xatolik!');
+        });
+    }
 }
 </script>
 {% endblock %}

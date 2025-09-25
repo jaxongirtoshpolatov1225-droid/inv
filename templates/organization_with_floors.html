@@ -46,6 +46,9 @@
                             <a href="/floor/{{ floor.id }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-eye"></i> Ko'rish
                             </a>
+                            <button class="btn btn-danger btn-sm ms-1" onclick="deleteFloor({{ floor.id }}, '{{ floor.name }}')">
+                                <i class="bi bi-trash"></i> O'chirish
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -121,6 +124,28 @@ function addFloor() {
         console.error('Xatolik:', error);
         alert('Xatolik yuz berdi!');
     });
+}
+
+// Qavatni o'chirish
+function deleteFloor(floorId, floorName) {
+    if (confirm(`"${floorName}" qavatini o'chirishni xohlaysizmi?\n\nEslatma: Barcha xonalar va jihozlar ham o'chiriladi!`)) {
+        fetch(`/delete_floor/${floorId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Qavat o\'chirildi!');
+                location.reload();
+            } else {
+                alert('Xatolik: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Qavat o\'chirishda xatolik!');
+        });
+    }
 }
 </script>
 {% endblock %}

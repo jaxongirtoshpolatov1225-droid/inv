@@ -16,6 +16,9 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1><i class="bi bi-house"></i> {{ room.name }} - Jihozlar</h1>
             <div>
+                <button class="btn btn-info me-2" onclick="printAllQRCodes()">
+                    <i class="bi bi-qr-code"></i> Print All QR
+                </button>
                 <a href="/export_room_excel/{{ room.id }}" class="btn btn-success me-2">
                     <i class="bi bi-file-earmark-excel"></i> Excel Export
                 </a>
@@ -248,21 +251,43 @@
 
 <!-- QR kod modali -->
 <div class="modal fade" id="qrModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">QR kod</h5>
+                <h5 class="modal-title">QR kod - To'liq ma'lumotlar</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <div id="qrCodeContainer">
-                    <!-- QR kod bu yerda ko'rsatiladi -->
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 text-center">
+                        <div class="mb-3">
+                            <small class="text-muted">40x30mm qog'oz uchun optimallashtirilgan</small>
+                        </div>
+                        <div id="qrCodeContainer">
+                            <!-- QR kod bu yerda ko'rsatiladi -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>QR kodda quyidagi ma'lumotlar mavjud:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Tashkilot:</strong> <span id="qrOrgName"></span></li>
+                            <li><strong>Qavat:</strong> <span id="qrFloorName"></span></li>
+                            <li><strong>Xona:</strong> <span id="qrRoomName"></span></li>
+                            <li><strong>Jihoz:</strong> <span id="qrEquipmentName"></span></li>
+                            <li><strong>Kategoriya:</strong> <span id="qrCategory"></span></li>
+                            <li><strong>Inv kode:</strong> <span id="qrInvCode"></span></li>
+                            <li><strong>Brend:</strong> <span id="qrBrand"></span></li>
+                            <li><strong>Model:</strong> <span id="qrModel"></span></li>
+                            <li><strong>Holat:</strong> <span id="qrStatus"></span></li>
+                        </ul>
+                    </div>
                 </div>
-                <p class="mt-3" id="qrCodeText"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
-                <button type="button" class="btn btn-primary" onclick="printQR()">Chop etish</button>
+                <button type="button" class="btn btn-primary" onclick="printQR()">
+                    <i class="bi bi-printer"></i> Chop etish
+                </button>
             </div>
         </div>
     </div>
@@ -837,17 +862,40 @@ function viewTransferHistory(equipmentId) {
 }
 
 function generateQR(equipmentId) {
-    fetch(`/generate_qr/${equipmentId}`)
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('qrCodeContainer').innerHTML = `<img src="data:image/png;base64,${data.qr_code}" class="qr-code" alt="QR Code">`;
-        document.getElementById('qrCodeText').textContent = `Inv kode: ${data.inv_code}`;
-        new bootstrap.Modal(document.getElementById('qrModal')).show();
-    })
-    .catch(error => {
-        console.error('Xatolik:', error);
-        alert('Xatolik yuz berdi!');
-    });
+    // Avval jihoz ma'lumotlarini olish
+    fetch(`/equipment/${equipmentId}`)
+        .then(response => response.json())
+        .then(equipmentData => {
+            // QR kod yaratish
+            fetch(`/generate_qr/${equipmentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // QR kodni ko'rsatish
+                    document.getElementById('qrCodeContainer').innerHTML = `<img src="data:image/png;base64,${data.qr_code}" class="qr-code" alt="QR Code">`;
+                    
+                    // Ma'lumotlarni modalda ko'rsatish
+                    document.getElementById('qrOrgName').textContent = equipmentData.organization_name;
+                    document.getElementById('qrFloorName').textContent = equipmentData.room_name; // Qavat ma'lumoti qo'shilishi kerak
+                    document.getElementById('qrRoomName').textContent = equipmentData.room_name;
+                    document.getElementById('qrEquipmentName').textContent = equipmentData.name;
+                    document.getElementById('qrCategory').textContent = equipmentData.category;
+                    document.getElementById('qrInvCode').textContent = equipmentData.inv_code;
+                    document.getElementById('qrBrand').textContent = equipmentData.brand || 'N/A';
+                    document.getElementById('qrModel').textContent = equipmentData.model || 'N/A';
+                    document.getElementById('qrStatus').textContent = equipmentData.status;
+                    
+                    // Modalni ochish
+                    new bootstrap.Modal(document.getElementById('qrModal')).show();
+                })
+                .catch(error => {
+                    console.error('QR kod yaratishda xatolik:', error);
+                    alert('QR kod yaratishda xatolik!');
+                });
+        })
+        .catch(error => {
+            console.error('Jihoz ma\'lumotlarini olishda xatolik:', error);
+            alert('Jihoz ma\'lumotlarini olishda xatolik!');
+        });
 }
 
 function printQR() {
@@ -856,21 +904,145 @@ function printQR() {
     printWindow.document.write(`
         <html>
             <head>
-                <title>QR kod chop etish</title>
+                <title>QR kod chop etish - 40x30mm</title>
                 <style>
-                    body { text-align: center; font-family: Arial, sans-serif; }
-                    img { max-width: 300px; height: auto; }
+                    @page {
+                        size: 40mm 30mm;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body { 
+                        text-align: center; 
+                        font-family: Arial, sans-serif; 
+                        margin: 0;
+                        padding: 0;
+                        width: 40mm;
+                        height: 30mm;
+                        overflow: hidden;
+                    }
+                    .qr-container {
+                        width: 40mm;
+                        height: 30mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 2mm;
+                    }
+                    img { 
+                        max-width: 25mm; 
+                        max-height: 20mm;
+                        width: auto;
+                        height: auto;
+                    }
+                    .qr-text {
+                        font-size: 6px;
+                        margin-top: 1mm;
+                        word-break: break-all;
+                        max-width: 35mm;
+                    }
                 </style>
             </head>
             <body>
-                <h3>Inventarizatsiya QR kodi</h3>
-                <img src="${qrImage.src}" alt="QR Code">
-                <p>${document.getElementById('qrCodeText').textContent}</p>
+                <div class="qr-container">
+                    <img src="${qrImage.src}" alt="QR Code" class="qr-code-print">
+                    <div class="qr-text">${document.getElementById('qrCodeText').textContent}</div>
+                </div>
             </body>
         </html>
     `);
     printWindow.document.close();
     printWindow.print();
+}
+
+// Barcha QR kodlarni chop etish
+function printAllQRCodes() {
+    fetch(`/generate_room_qr_codes/{{ room.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const printWindow = window.open('', '_blank');
+                let html = `
+                    <html>
+                        <head>
+                            <title>Barcha QR kodlar - {{ room.name }}</title>
+                            <style>
+                                @page {
+                                    size: 40mm 30mm;
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                                * {
+                                    margin: 0;
+                                    padding: 0;
+                                    box-sizing: border-box;
+                                }
+                                body { 
+                                    text-align: center; 
+                                    font-family: Arial, sans-serif; 
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                                .qr-page {
+                                    width: 40mm;
+                                    height: 30mm;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: center;
+                                    align-items: center;
+                                    padding: 2mm;
+                                    page-break-after: always;
+                                }
+                                .qr-page:last-child {
+                                    page-break-after: avoid;
+                                }
+                                img { 
+                                    max-width: 25mm; 
+                                    max-height: 20mm;
+                                    width: auto;
+                                    height: auto;
+                                }
+                                .qr-text {
+                                    font-size: 6px;
+                                    margin-top: 1mm;
+                                    word-break: break-all;
+                                    max-width: 35mm;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                `;
+                
+                data.qr_codes.forEach(qr => {
+                    html += `
+                        <div class="qr-page">
+                            <img src="data:image/png;base64,${qr.qr_code}" alt="QR Code">
+                            <div class="qr-text">Inv kode: ${qr.inv_code}</div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </body>
+                    </html>
+                `;
+                
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.print();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('QR kodlarni olishda xatolik!');
+        });
 }
 </script>
 {% endblock %}

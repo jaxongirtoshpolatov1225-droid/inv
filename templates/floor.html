@@ -42,6 +42,9 @@
                             <a href="/export_room_excel/{{ room.id }}" class="btn btn-success btn-sm ms-1">
                                 <i class="bi bi-file-earmark-excel"></i> Excel
                             </a>
+                            <button class="btn btn-danger btn-sm ms-1" onclick="deleteRoom({{ room.id }}, '{{ room.name }}')">
+                                <i class="bi bi-trash"></i> O'chirish
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -117,6 +120,93 @@ function addRoom() {
     .catch(error => {
         console.error('Xatolik:', error);
         alert('Xatolik yuz berdi!');
+    });
+}
+
+// Xonani o'chirish
+function deleteRoom(roomId, roomName) {
+    // Avval jihozlar mavjudligini tekshirish
+    fetch(`/check_room_equipment/${roomId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_equipment) {
+                // Jihozlar mavjud bo'lsa, variantlarni taklif qilish
+                const choice = confirm(
+                    `"${roomName}" xonasida ${data.equipment_count} ta jihoz mavjud.\n\n` +
+                    `OK - Jihozlar bilan birga o'chirish\n` +
+                    `Cancel - Bekor qilish`
+                );
+                
+                if (choice) {
+                    // Jihozlar bilan birga o'chirish
+                    confirmDeleteRoomWithEquipment(roomId, roomName, data.equipment_count);
+                }
+            } else {
+                // Jihozlar yo'q bo'lsa, oddiy o'chirish
+                if (confirm(`"${roomName}" xonasini o'chirishni xohlaysizmi?`)) {
+                    performDeleteRoom(roomId);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Jihozlar sonini tekshirishda xatolik!');
+        });
+}
+
+// Jihozlar bilan birga o'chirishni tasdiqlash
+function confirmDeleteRoomWithEquipment(roomId, roomName, equipmentCount) {
+    const finalConfirm = confirm(
+        `"${roomName}" xonasini va ${equipmentCount} ta jihozni o'chirishni xohlaysizmi?\n\n` +
+        `Bu amal qaytarib bo'lmaydi!`
+    );
+    
+    if (finalConfirm) {
+        performDeleteRoomWithEquipment(roomId);
+    }
+}
+
+// Xonani jihozlar bilan birga o'chirish
+function performDeleteRoomWithEquipment(roomId) {
+    fetch(`/delete_room_with_equipment/${roomId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Xona va barcha jihozlar o\'chirildi!');
+            location.reload();
+        } else {
+            alert('Xatolik: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Xona o\'chirishda xatolik!');
+    });
+}
+
+// Oddiy xona o'chirish
+function performDeleteRoom(roomId) {
+    fetch(`/delete_room/${roomId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Xona o\'chirildi!');
+            location.reload();
+        } else {
+            if (data.has_equipment) {
+                alert(data.message);
+            } else {
+                alert('Xatolik: ' + data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Xatolik:', error);
+        alert('Xona o\'chirishda xatolik!');
     });
 }
 </script>

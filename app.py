@@ -192,11 +192,23 @@ def add_equipment():
 def generate_qr(equipment_id):
     equipment = Equipment.query.get_or_404(equipment_id)
     
-    # QR kod matni
-    qr_text = f"Tashkilot: {equipment.room.organization.name}\nInv kode: {equipment.inv_code}"
+    # QR kod matni (to'liq ma'lumotlar)
+    qr_text = f"""TASHKILOT: {equipment.room.organization.name}
+QAVAT: {equipment.room.floor.name if equipment.room.floor else 'Yo\'q'}
+XONA: {equipment.room.name}
+JIHOZ: {equipment.name}
+KATEGORIYA: {equipment.category}
+INV KODE: {equipment.inv_code}
+BREND: {equipment.brand or 'N/A'}
+MODEL: {equipment.model or 'N/A'}
+HOLAT: {equipment.status}"""
     
-    # QR kod yaratish
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    # QR kod yaratish (40x30mm qog'oz uchun optimallashtirilgan)
+    qr = qrcode.QRCode(
+        version=3,           # Kattaroq versiya (ko'p ma'lumot uchun)
+        box_size=2,          # Kichikroq box_size (ko'p ma'lumot uchun)
+        border=1             # Minimal border
+    )
     qr.add_data(qr_text)
     qr.make(fit=True)
     
@@ -210,6 +222,61 @@ def generate_qr(equipment_id):
     img_base64 = base64.b64encode(buffer.getvalue()).decode()
     
     return jsonify({'qr_code': img_base64, 'inv_code': equipment.inv_code})
+
+# Xonadagi barcha jihozlar uchun QR kodlar yaratish
+@app.route('/generate_room_qr_codes/<int:room_id>')
+def generate_room_qr_codes(room_id):
+    room = Room.query.get_or_404(room_id)
+    equipment_list = Equipment.query.filter_by(room_id=room_id).all()
+    
+    if not equipment_list:
+        return jsonify({'success': False, 'message': 'Xonada jihoz yo\'q'})
+    
+    qr_codes = []
+    
+    for equipment in equipment_list:
+        # QR kod matni (to'liq ma'lumotlar)
+        qr_text = f"""TASHKILOT: {equipment.room.organization.name}
+QAVAT: {equipment.room.floor.name if equipment.room.floor else 'Yo\'q'}
+XONA: {equipment.room.name}
+JIHOZ: {equipment.name}
+KATEGORIYA: {equipment.category}
+INV KODE: {equipment.inv_code}
+BREND: {equipment.brand or 'N/A'}
+MODEL: {equipment.model or 'N/A'}
+HOLAT: {equipment.status}"""
+        
+        # QR kod yaratish (40x30mm qog'oz uchun optimallashtirilgan)
+        qr = qrcode.QRCode(
+            version=3,           # Kattaroq versiya (ko'p ma'lumot uchun)
+            box_size=2,          # Kichikroq box_size (ko'p ma'lumot uchun)
+            border=1             # Minimal border
+        )
+        qr.add_data(qr_text)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Rasmni base64 formatiga o'tkazish
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        qr_codes.append({
+            'equipment_id': equipment.id,
+            'inv_code': equipment.inv_code,
+            'name': equipment.name,
+            'qr_code': img_base64
+        })
+    
+    return jsonify({
+        'success': True,
+        'room_name': room.name,
+        'equipment_count': len(qr_codes),
+        'qr_codes': qr_codes
+    })
 
 # Jihoz ma'lumotlarini olish
 @app.route('/equipment/<int:equipment_id>')
@@ -258,6 +325,105 @@ def delete_equipment(equipment_id):
     db.session.commit()
     
     return jsonify({'success': True, 'message': 'Jihoz o\'chirildi'})
+
+# Tashkilotni o'chirish
+@app.route('/delete_organization/<int:org_id>', methods=['DELETE'])
+def delete_organization(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    
+    # Tashkilotdagi barcha xonalarni olish
+    rooms = Room.query.filter_by(organization_id=org_id).all()
+    
+    # Har bir xona uchun transfer_history ni o'chirish
+    for room in rooms:
+        TransferHistory.query.filter(
+            (TransferHistory.from_room_id == room.id) | 
+            (TransferHistory.to_room_id == room.id)
+        ).delete()
+    
+    # Keyin tashkilotni o'chirish (qavatlar va xonlar cascade orqali o'chiriladi)
+    db.session.delete(organization)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Tashkilot o\'chirildi'})
+
+# Qavatni o'chirish
+@app.route('/delete_floor/<int:floor_id>', methods=['DELETE'])
+def delete_floor(floor_id):
+    floor = Floor.query.get_or_404(floor_id)
+    
+    # Qavatdagi barcha xonalarni olish
+    rooms = Room.query.filter_by(floor_id=floor_id).all()
+    
+    # Har bir xona uchun transfer_history ni o'chirish
+    for room in rooms:
+        TransferHistory.query.filter(
+            (TransferHistory.from_room_id == room.id) | 
+            (TransferHistory.to_room_id == room.id)
+        ).delete()
+    
+    # Keyin qavatni o'chirish (xonlar cascade orqali o'chiriladi)
+    db.session.delete(floor)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Qavat o\'chirildi'})
+
+# Xonadagi jihozlar sonini tekshirish
+@app.route('/check_room_equipment/<int:room_id>')
+def check_room_equipment(room_id):
+    room = Room.query.get_or_404(room_id)
+    equipment_count = Equipment.query.filter_by(room_id=room_id).count()
+    
+    return jsonify({
+        'has_equipment': equipment_count > 0,
+        'equipment_count': equipment_count,
+        'room_name': room.name
+    })
+
+# Xonani o'chirish (jihozlar bilan birga)
+@app.route('/delete_room_with_equipment/<int:room_id>', methods=['DELETE'])
+def delete_room_with_equipment(room_id):
+    room = Room.query.get_or_404(room_id)
+    
+    # Avval transfer_history jadvalidagi ma'lumotlarni o'chirish
+    TransferHistory.query.filter(
+        (TransferHistory.from_room_id == room_id) | 
+        (TransferHistory.to_room_id == room_id)
+    ).delete()
+    
+    # Keyin xonani o'chirish (jihozlar cascade orqali o'chiriladi)
+    db.session.delete(room)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Xona va barcha jihozlar o\'chirildi'})
+
+# Xonani o'chirish (jihozlarsiz)
+@app.route('/delete_room/<int:room_id>', methods=['DELETE'])
+def delete_room(room_id):
+    room = Room.query.get_or_404(room_id)
+    
+    # Jihozlar mavjudligini tekshirish
+    equipment_count = Equipment.query.filter_by(room_id=room_id).count()
+    
+    if equipment_count > 0:
+        return jsonify({
+            'success': False, 
+            'has_equipment': True,
+            'equipment_count': equipment_count,
+            'message': f'Xonada {equipment_count} ta jihoz mavjud. Avval jihozlarni boshqa joyga ko\'chiring yoki o\'chiring.'
+        })
+    
+    # Avval transfer_history jadvalidagi ma'lumotlarni o'chirish
+    TransferHistory.query.filter(
+        (TransferHistory.from_room_id == room_id) | 
+        (TransferHistory.to_room_id == room_id)
+    ).delete()
+    
+    # Keyin xonani o'chirish
+    db.session.delete(room)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Xona o\'chirildi'})
 
 # Jihoz transfer qilish
 @app.route('/transfer_equipment/<int:equipment_id>', methods=['POST'])
