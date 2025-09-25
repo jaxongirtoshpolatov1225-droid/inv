@@ -278,7 +278,10 @@
                             <li><strong>Inv kode:</strong> <span id="qrInvCode"></span></li>
                             <li><strong>Brend:</strong> <span id="qrBrand"></span></li>
                             <li><strong>Model:</strong> <span id="qrModel"></span></li>
+                            <li><strong>Seriya:</strong> <span id="qrSerialNumber"></span></li>
+                            <li><strong>Rang:</strong> <span id="qrColor"></span></li>
                             <li><strong>Holat:</strong> <span id="qrStatus"></span></li>
+                            <li><strong>Tavsif:</strong> <span id="qrDescription"></span></li>
                         </ul>
                     </div>
                 </div>
@@ -882,7 +885,10 @@ function generateQR(equipmentId) {
                     document.getElementById('qrInvCode').textContent = equipmentData.inv_code;
                     document.getElementById('qrBrand').textContent = equipmentData.brand || 'N/A';
                     document.getElementById('qrModel').textContent = equipmentData.model || 'N/A';
+                    document.getElementById('qrSerialNumber').textContent = equipmentData.serial_number || 'N/A';
+                    document.getElementById('qrColor').textContent = equipmentData.color || 'N/A';
                     document.getElementById('qrStatus').textContent = equipmentData.status;
+                    document.getElementById('qrDescription').textContent = equipmentData.description || 'N/A';
                     
                     // Modalni ochish
                     new bootstrap.Modal(document.getElementById('qrModal')).show();

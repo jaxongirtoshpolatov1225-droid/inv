@@ -201,7 +201,10 @@ KATEGORIYA: {equipment.category}
 INV KODE: {equipment.inv_code}
 BREND: {equipment.brand or 'N/A'}
 MODEL: {equipment.model or 'N/A'}
-HOLAT: {equipment.status}"""
+SERIYA: {equipment.serial_number or 'N/A'}
+RANG: {equipment.color or 'N/A'}
+HOLAT: {equipment.status}
+TAVSIF: {equipment.description or 'N/A'}"""
     
     # QR kod yaratish (40x30mm qog'oz uchun optimallashtirilgan)
     qr = qrcode.QRCode(
@@ -244,7 +247,10 @@ KATEGORIYA: {equipment.category}
 INV KODE: {equipment.inv_code}
 BREND: {equipment.brand or 'N/A'}
 MODEL: {equipment.model or 'N/A'}
-HOLAT: {equipment.status}"""
+SERIYA: {equipment.serial_number or 'N/A'}
+RANG: {equipment.color or 'N/A'}
+HOLAT: {equipment.status}
+TAVSIF: {equipment.description or 'N/A'}"""
         
         # QR kod yaratish (40x30mm qog'oz uchun optimallashtirilgan)
         qr = qrcode.QRCode(
