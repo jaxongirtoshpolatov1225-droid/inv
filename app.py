@@ -294,6 +294,7 @@ def get_equipment(equipment_id):
         'status': equipment.status,
         'description': equipment.description,
         'room_name': equipment.room.name,
+        'floor_name': equipment.room.floor.name if equipment.room.floor else None,
         'organization_name': equipment.room.organization.name
     })
 

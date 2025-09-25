@@ -875,7 +875,7 @@ function generateQR(equipmentId) {
                     
                     // Ma'lumotlarni modalda ko'rsatish
                     document.getElementById('qrOrgName').textContent = equipmentData.organization_name;
-                    document.getElementById('qrFloorName').textContent = equipmentData.room_name; // Qavat ma'lumoti qo'shilishi kerak
+                    document.getElementById('qrFloorName').textContent = equipmentData.floor_name || 'Yo\'q';
                     document.getElementById('qrRoomName').textContent = equipmentData.room_name;
                     document.getElementById('qrEquipmentName').textContent = equipmentData.name;
                     document.getElementById('qrCategory').textContent = equipmentData.category;
@@ -900,7 +900,18 @@ function generateQR(equipmentId) {
 
 function printQR() {
     const qrImage = document.querySelector('#qrCodeContainer img');
+    
+    if (!qrImage) {
+        alert('QR kod topilmadi!');
+        return;
+    }
+    
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('Pop-up bloklangan! Pop-up blokirovkasini o\'chiring.');
+        return;
+    }
+    
     printWindow.document.write(`
         <html>
             <head>
@@ -951,13 +962,17 @@ function printQR() {
             <body>
                 <div class="qr-container">
                     <img src="${qrImage.src}" alt="QR Code" class="qr-code-print">
-                    <div class="qr-text">${document.getElementById('qrCodeText').textContent}</div>
+                    <div class="qr-text">Inv kode: ${document.getElementById('qrInvCode').textContent}</div>
                 </div>
             </body>
         </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+    
+    // Sahifa yuklangandan keyin chop etish
+    printWindow.onload = function() {
+        printWindow.print();
+    };
 }
 
 // Barcha QR kodlarni chop etish
